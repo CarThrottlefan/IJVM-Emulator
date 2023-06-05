@@ -13,6 +13,8 @@
             "cwd": "${workspaceFolder}",
             // "stopAtEntry": true,  // uncomment to automatically set breakpoint at start of main.
             "preLaunchTask": "Build ijvm",
+            "MIMode": "lldb",
+            "externalConsole": true,
         },
         {
             "name": "Build and Debug test",
@@ -23,6 +25,8 @@
             // "stopAtEntry": true,  // uncomment to automatically set breakpoint at start of main.
             // "preLaunchTask": "Build all tests",
             "preLaunchTask": "Build test_${input:testID}",
+            "MIMode": "lldb",
+            "externalConsole": true,
         }
     ],
     "inputs": [
