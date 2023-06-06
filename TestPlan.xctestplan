@@ -1,0 +1,18 @@
+{
+  "configurations" : [
+    {
+      "id" : "790C31DF-E254-497E-9880-4316704393F4",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "testTimeoutsEnabled" : true
+  },
+  "testTargets" : [
+
+  ],
+  "version" : 1
+}

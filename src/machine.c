@@ -24,13 +24,21 @@ int init_ijvm(char *binary_path)
 {
   in = stdin;
   out = stdout;
+  //char test_str[5] = {'T','s','x','0','\n'};
+  //*binary_path = test_str; //TODO see if the binary path string is correct
   // TODO: implement me
+  FILE *f = fopen(binary_path, "rb");
+  printf("Test String is: %c \n", binary_path);
+  if(f != NULL) {
+    printf("File located at '%c' opened\n", *binary_path);
+    return 0;
+  }
   return -1;
 }
 
 void destroy_ijvm(void) 
 {
-  // TODO: implement me
+  // TODO: implement me - dealloc all memory, call init
 }
 
 byte_t *get_text(void) 
