@@ -24,13 +24,27 @@ int init_ijvm(char *binary_path)
 {
   in = stdin;
   out = stdout;
-  //char test_str[5] = {'T','s','x','0','\n'};
-  //*binary_path = test_str; //TODO see if the binary path string is correct
+  uint8_t buf[4]; //FIXME the size for this might be worng
+ 
   // TODO: implement me
   FILE *f = fopen(binary_path, "rb");
-  printf("Test String is: %c \n", binary_path);
   if(f != NULL) {
-    printf("File located at '%c' opened\n", *binary_path);
+    printf("File located at '%s' opened\n", binary_path);
+    
+    // Magic Number
+    fread(buf, sizeof(uint8_t), 4, f);
+    uint32_t magicNum = read_uint32_t(buf);
+    if(magicNum != 0x1DEADFAD)
+    {
+      printf('This is not an IJVM file\n');
+      return -1;
+    }
+    
+    //Skip past ct origin
+    fread(buf, sizeof(uint8_t), 4, f);
+    uint32_t test = read_uint32_t(buf);
+    printf("Is this a new val? 0x%08x\n", test);
+
     return 0;
   }
   return -1;
@@ -44,6 +58,7 @@ void destroy_ijvm(void)
 byte_t *get_text(void) 
 {
   // TODO: implement me
+  printf("Testing file\n");
   return NULL;
 }
 
