@@ -10,6 +10,8 @@ FILE *in;   // use fgetc(in) to get a character from in.
             // This will return EOF if no char is available.
 FILE *out;  // use for example fprintf(out, "%c", value); to print value to out
 
+uint32_t ctNum, txtNum; //How many bytes there are in Constant and Text respectively
+
 void set_input(FILE *fp) 
 { 
   in = fp; 
@@ -36,14 +38,28 @@ int init_ijvm(char *binary_path)
     uint32_t magicNum = read_uint32_t(buf);
     if(magicNum != 0x1DEADFAD)
     {
-      printf('This is not an IJVM file\n');
+      printf("This is not an IJVM file\n");
       return -1;
     }
     
     //Skip past ct origin
     fread(buf, sizeof(uint8_t), 4, f);
-    uint32_t test = read_uint32_t(buf);
-    printf("Is this a new val? 0x%08x\n", test);
+    //uint32_t test = read_uint32_t(buf);
+    //printf("Is this a new val? 0x%08x\n", test); Used for debugging to check if it skips bytes in read
+
+    //Read constant
+    fread(buf, sizeof(uint8_t), 4, f);
+    ctNum = read_uint32_t(buf);
+    uint32_t temp = ctNum;
+    ctNum = ctNum / 4; //divided by 4 since each constant is 4 bytes
+    
+    int *ctVals = (int *)calloc(ctNum, 4);
+    fread(ctVals, sizeof(uint16_t), temp, f);
+    for(int i = 0; i < ctNum; i++)
+    {
+      printf("What the heck is here? 0x%08x\n", ctVals[i]); //FIXME need to invert the values - wrong endian
+    }
+    
 
     return 0;
   }
