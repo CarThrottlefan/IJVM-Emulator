@@ -2,6 +2,7 @@
 #include <stdlib.h> // malloc, free
 #include "ijvm.h"
 #include "util.h" // read this file for debug prints, endianness helper functions
+#include <string.h>
 
 
 // see ijvm.h for descriptions of the below functions
@@ -11,6 +12,7 @@ FILE *in;   // use fgetc(in) to get a character from in.
 FILE *out;  // use for example fprintf(out, "%c", value); to print value to out
 
 uint32_t ctNum, txtNum; //How many bytes there are in Constant and Text respectively
+int *ctVals, *txtVals;
 
 void set_input(FILE *fp) 
 { 
@@ -34,8 +36,8 @@ int init_ijvm(char *binary_path)
     printf("File located at '%s' opened\n", binary_path);
     
     // Magic Number
-    fread(buf, sizeof(uint8_t), 4, f);
-    uint32_t magicNum = read_uint32_t(buf);
+    fread(buf, sizeof(uint8_t), 4, f); //reads from f 1 byte at a time, the first 4 bytes
+    uint32_t magicNum = read_uint32_t(buf); //TODO ask tiziano about this function, what it does
     if(magicNum != 0x1DEADFAD)
     {
       printf("This is not an IJVM file\n");
@@ -50,17 +52,38 @@ int init_ijvm(char *binary_path)
     //Read constant
     fread(buf, sizeof(uint8_t), 4, f);
     ctNum = read_uint32_t(buf);
-    uint32_t temp = ctNum;
+    uint32_t cpy = ctNum; 
     ctNum = ctNum / 4; //divided by 4 since each constant is 4 bytes
     
-    int *ctVals = (int *)calloc(ctNum, 4);
-    fread(ctVals, sizeof(uint16_t), temp, f);
+    ctVals = (int *)calloc(ctNum, 4); //allocates a block of 'ctNum' values, each 4 bytes
+    fread(ctVals, sizeof(uint16_t), cpy, f); //reads each constant from the block
     for(int i = 0; i < ctNum; i++)
     {
       ctVals[i] = swap_uint32(ctVals[i]);
-      printf("What the heck is here? 0x%08x\n", ctVals[i]);
+      //printf("Value: 0x%08x\n", get_constant(i)); //TODO ask what this function needs to do
     }
+
+    //FIXME find out why the buf gets the same data for text
+    //Skip past txt origin 
+    //memset(buf, 0, sizeof(buf)); - resets buf to be filled with 0's
+    fread(buf, sizeof(uint8_t), 4, f);
+    uint32_t test = read_uint32_t(buf);
+    printf("Is this a new val? 0x%08x\n", test);
+
+    //Read txt
+    fread(buf, sizeof(uint8_t), 4 ,f);
+    txtNum = read_uint32_t(buf);
+    //cpy = txtNum;
+    //txtNum = txtNum / 4;
+    printf("Txt val is: 0x%08x\n", txtNum);
     
+    txtVals = (int *)calloc(txtNum, 4);
+    fread(txtVals, sizeof(uint16_t), cpy, f);
+    for(int i = 0; i < txtNum; i++)
+    {
+      txtVals[i] = swap_uint32(txtVals[i]);
+      printf("Value: 0x%08x\n", txtVals[i]);
+    }
 
     return 0;
   }
@@ -75,20 +98,21 @@ void destroy_ijvm(void)
 byte_t *get_text(void) 
 {
   // TODO: implement me
-  printf("Testing file\n");
-  return NULL;
+  //return txtVals;
+  return 0;
 }
 
 unsigned int get_text_size(void) 
 {
   // TODO: implement me
-  return 0;
+  return txtNum;
 }
 
 word_t get_constant(int i) 
 {
   // TODO: implement me
-  return 0;
+  return(ctVals[i]);
+  //return 0;
 }
 
 unsigned int get_program_counter(void) 
