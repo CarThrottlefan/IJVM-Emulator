@@ -57,7 +57,8 @@ int init_ijvm(char *binary_path)
     fread(ctVals, sizeof(uint16_t), temp, f);
     for(int i = 0; i < ctNum; i++)
     {
-      printf("What the heck is here? 0x%08x\n", ctVals[i]); //FIXME need to invert the values - wrong endian
+      ctVals[i] = swap_uint32(ctVals[i]);
+      printf("What the heck is here? 0x%08x\n", ctVals[i]);
     }
     
 
