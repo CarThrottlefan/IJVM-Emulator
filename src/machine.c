@@ -28,9 +28,8 @@ int init_ijvm(char *binary_path)
 {
   in = stdin;
   out = stdout;
-  uint8_t buf[4]; //FIXME the size for this might be worng
+  uint8_t buf[4]; 
  
-  // TODO: implement me
   FILE *f = fopen(binary_path, "rb");
   if(f == NULL) {
     return -1;
@@ -73,35 +72,29 @@ int init_ijvm(char *binary_path)
   txtVals = (int *)calloc(txtNum, 4);
   fread(txtVals, sizeof(uint8_t), txtNum, f); //reads a byte each time, stores it in txtVals
   
+  fclose(f);
   return 0;
 }
 
 void destroy_ijvm(void) 
 {
-  // TODO: implement me - dealloc all memory, call init
   free(txtVals);
   free(ctVals);
-  //init_ijvm();
 }
 
 byte_t *get_text(void) 
 {
-  // TODO: implement me
   return txtVals;
-  return 0;
 }
 
 unsigned int get_text_size(void) 
 {
-  // TODO: implement me
   return txtNum;
 }
 
 word_t get_constant(int i) 
 {
-  // TODO: implement me
   return(ctVals[i]);
-  //return 0;
 }
 
 unsigned int get_program_counter(void) 
