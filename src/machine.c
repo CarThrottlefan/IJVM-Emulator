@@ -32,73 +32,62 @@ int init_ijvm(char *binary_path)
  
   // TODO: implement me
   FILE *f = fopen(binary_path, "rb");
-  if(f != NULL) {
-    printf("File located at '%s' opened\n", binary_path);
-    
-    // Magic Number
-    fread(buf, sizeof(uint8_t), 4, f); //reads from f 1 byte at a time, the first 4 bytes
-    uint32_t magicNum = read_uint32_t(buf); //TODO ask tiziano about this function, what it does
-    if(magicNum != 0x1DEADFAD)
-    {
-      printf("This is not an IJVM file\n");
-      return -1;
-    }
-    
-    //Skip past ct origin
-    fread(buf, sizeof(uint8_t), 4, f);
-    //uint32_t test = read_uint32_t(buf);
-    //printf("Is this a new val? 0x%08x\n", test); Used for debugging to check if it skips bytes in read
-
-    //Read constant
-    fread(buf, sizeof(uint8_t), 4, f);
-    ctNum = read_uint32_t(buf);
-    uint32_t cpy = ctNum; 
-    ctNum = ctNum / 4; //divided by 4 since each constant is 4 bytes
-    
-    ctVals = (int *)calloc(ctNum, 4); //allocates a block of 'ctNum' values, each 4 bytes
-    fread(ctVals, sizeof(uint16_t), cpy, f); //reads each constant from the block
-    for(int i = 0; i < ctNum; i++)
-    {
-      ctVals[i] = swap_uint32(ctVals[i]);
-      //printf("Value: 0x%08x\n", get_constant(i)); //TODO ask what this function needs to do
-    }
-
-    //FIXME find out why the buf gets the same data for text
-    //Skip past txt origin 
-    //memset(buf, 0, sizeof(buf)); - resets buf to be filled with 0's
-    fread(buf, sizeof(uint8_t), 4, f);
-    uint32_t test = read_uint32_t(buf);
-    printf("Is this a new val? 0x%08x\n", test);
-
-    //Read txt
-    fread(buf, sizeof(uint8_t), 4 ,f);
-    txtNum = read_uint32_t(buf);
-    //cpy = txtNum;
-    //txtNum = txtNum / 4;
-    printf("Txt val is: 0x%08x\n", txtNum);
-    
-    txtVals = (int *)calloc(txtNum, 4);
-    fread(txtVals, sizeof(uint16_t), cpy, f);
-    for(int i = 0; i < txtNum; i++)
-    {
-      txtVals[i] = swap_uint32(txtVals[i]);
-      printf("Value: 0x%08x\n", txtVals[i]);
-    }
-
-    return 0;
+  if(f == NULL) {
+    return -1;
   }
-  return -1;
+
+  printf("File located at '%s' opened\n", binary_path);
+  
+  // Magic Number
+  fread(buf, sizeof(uint8_t), 4, f); //reads from f 1 byte at a time, the first 4 bytes
+  uint32_t magicNum = read_uint32_t(buf);
+  if(magicNum != 0x1DEADFAD)
+  {
+    printf("This is not an IJVM file\n");
+    return -1;
+  }
+  
+  //Skip past ct origin
+  fread(buf, sizeof(uint8_t), 4, f);
+  uint32_t test = read_uint32_t(buf);
+
+  //Read constant
+  fread(buf, sizeof(uint8_t), 4, f);
+  ctNum = read_uint32_t(buf);
+  
+  ctNum = ctNum / 4; //divided by 4 since each constant is 4 bytes
+  ctVals = (int *)calloc(ctNum, 4); //allocates a block of 'ctNum' values, each 4 bytes
+  fread(ctVals, sizeof(uint32_t), ctNum, f); //reads each constant from the block
+  for(int i = 0; i < ctNum; i++)
+  {
+    ctVals[i] = swap_uint32(ctVals[i]);
+  }
+
+  //Skip past txt origin 
+  fread(buf, sizeof(uint8_t), 4, f);
+
+  //Read txt
+  fread(buf, sizeof(uint8_t), 4 ,f);
+  txtNum = read_uint32_t(buf);
+  
+  txtVals = (int *)calloc(txtNum, 4);
+  fread(txtVals, sizeof(uint8_t), txtNum, f); //reads a byte each time, stores it in txtVals
+  
+  return 0;
 }
 
 void destroy_ijvm(void) 
 {
   // TODO: implement me - dealloc all memory, call init
+  free(txtVals);
+  free(ctVals);
+  //init_ijvm();
 }
 
 byte_t *get_text(void) 
 {
   // TODO: implement me
-  //return txtVals;
+  return txtVals;
   return 0;
 }
 
