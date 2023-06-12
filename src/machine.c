@@ -11,7 +11,7 @@ FILE *in;   // use fgetc(in) to get a character from in.
             // This will return EOF if no char is available.
 FILE *out;  // use for example fprintf(out, "%c", value); to print value to out
 
-uint32_t ctNum, txtNum, progCount; //How many bytes there are in Constant and Text respectively
+uint32_t ctNum, txtNum, progCount = 0; //How many bytes there are in Constant and Text respectively
 int *ctVals, *txtVals;
 
 //------------------------Stack implementation begins---------------
@@ -19,9 +19,12 @@ int *ctVals, *txtVals;
 
 struct Stack
 {
-  int items[maxSize];
-  int top;
+  uint32_t items[maxSize];
+  uint32_t top;
 };
+
+struct Stack globalStack;
+struct Stack* globalStack_ptr = &globalStack;
 
 void initialize(struct Stack* stack) {
     stack->top = -1; //initializes the stack pointer to -1 when a stack is made
@@ -40,13 +43,6 @@ void push(struct Stack* stack, uint32_t element)
   stack->top +=1;
   stack->items[stack->top] = element;
   printf("The pushed element is %d\n", stack->items[stack->top]);
-}
-
-uint32_t top(struct Stack* stack)
-{
-  assert(stack->top != -1 && "Stack is empty");
-  printf("The top is %d\n", stack->items[stack->top]);
-  return stack->items[stack->top];
 }
 //------------------------Stack implementation ends---------------
 
@@ -133,17 +129,24 @@ word_t get_constant(int i)
   return(ctVals[i]);
 }
 
-unsigned int get_program_counter(void) 
+/*unsigned int get_program_counter(void)
 {
-  // TODO: implement me
+  switch (expression)
+  {
+  case:  
+    break;
+  
+  default:
+    break;
+  }
   return 0;
-}
+}*/
 
 word_t tos(void) 
 {
-  // this operation should NOT pop (remove top element from stack)
-  // TODO: implement me
-  return -1;
+  assert(globalStack_ptr->top != -1 && "Stack is empty");
+  int32_t signedTop = (int) globalStack_ptr->items[globalStack_ptr->top];
+  return signedTop;
 }
 
 bool finished(void) 
