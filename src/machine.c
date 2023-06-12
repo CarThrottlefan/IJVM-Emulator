@@ -14,6 +14,7 @@ FILE *out;  // use for example fprintf(out, "%c", value); to print value to out
 uint32_t ctNum, txtNum, progCount; //How many bytes there are in Constant and Text respectively
 int *ctVals, *txtVals;
 
+//------------------------Stack implementation begins---------------
 #define maxSize 1024
 
 struct Stack
@@ -47,6 +48,7 @@ uint32_t top(struct Stack* stack)
   printf("The top is %d\n", stack->items[stack->top]);
   return stack->items[stack->top];
 }
+//------------------------Stack implementation ends---------------
 
 void set_input(FILE *fp) 
 { 
