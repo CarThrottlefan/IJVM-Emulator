@@ -3,7 +3,7 @@
 #include "ijvm.h"
 #include "util.h" // read this file for debug prints, endianness helper functions
 #include <string.h>
-
+#include "assert.h"
 
 // see ijvm.h for descriptions of the below functions
 
@@ -11,8 +11,42 @@ FILE *in;   // use fgetc(in) to get a character from in.
             // This will return EOF if no char is available.
 FILE *out;  // use for example fprintf(out, "%c", value); to print value to out
 
-uint32_t ctNum, txtNum; //How many bytes there are in Constant and Text respectively
+uint32_t ctNum, txtNum, progCount; //How many bytes there are in Constant and Text respectively
 int *ctVals, *txtVals;
+
+#define maxSize 1024
+
+struct Stack
+{
+  int items[maxSize];
+  int top;
+};
+
+void initialize(struct Stack* stack) {
+    stack->top = -1; //initializes the stack pointer to -1 when a stack is made
+}
+
+void pop(struct Stack* stack) 
+{
+  assert(stack->top != -1 && "Stack is empty");
+  printf("The popped element is %d\n", stack->items[stack->top]);
+  stack->top -= 1;
+}
+
+void push(struct Stack* stack, uint32_t element)
+{
+  assert(stack->top != (maxSize - 1) && "Stack overflow");
+  stack->top +=1;
+  stack->items[stack->top] = element;
+  printf("The pushed element is %d\n", stack->items[stack->top]);
+}
+
+uint32_t top(struct Stack* stack)
+{
+  assert(stack->top != -1 && "Stack is empty");
+  printf("The top is %d\n", stack->items[stack->top]);
+  return stack->items[stack->top];
+}
 
 void set_input(FILE *fp) 
 { 
@@ -28,7 +62,8 @@ int init_ijvm(char *binary_path)
 {
   in = stdin;
   out = stdout;
-  uint8_t buf[4]; 
+  uint8_t buf[4];
+  progCount = 0; 
  
   FILE *f = fopen(binary_path, "rb");
   if(f == NULL) {
@@ -48,7 +83,6 @@ int init_ijvm(char *binary_path)
   
   //Skip past ct origin
   fread(buf, sizeof(uint8_t), 4, f);
-  uint32_t test = read_uint32_t(buf);
 
   //Read constant
   fread(buf, sizeof(uint8_t), 4, f);
