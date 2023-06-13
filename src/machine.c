@@ -11,38 +11,47 @@ FILE *in;   // use fgetc(in) to get a character from in.
             // This will return EOF if no char is available.
 FILE *out;  // use for example fprintf(out, "%c", value); to print value to out
 
-uint32_t ctNum, txtNum, progCount = 0; //How many bytes there are in Constant and Text respectively
+uint32_t ctNum, txtNum, progCount = 0;
 int *ctVals, *txtVals;
+bool isFinished = false;
 
 //------------------------Stack implementation begins---------------
-#define maxSize 1024
+#define initSize 1024
 
 struct Stack
 {
-  uint32_t items[maxSize];
-  uint32_t top;
+  word_t *items;
+  int topAddr;
+  uint32_t currMaxSize;
 };
 
 struct Stack globalStack;
 struct Stack* globalStack_ptr = &globalStack;
 
 void initialize(struct Stack* stack) {
-    stack->top = -1; //initializes the stack pointer to -1 when a stack is made
+    stack->items = (word_t*) malloc(initSize * sizeof(word_t));
+    stack->currMaxSize = initSize;
+    stack->topAddr = -1; //initializes the stack pointer to -1 when a stack is made
 }
 
 void pop(struct Stack* stack) 
 {
-  assert(stack->top != -1 && "Stack is empty");
-  printf("The popped element is %d\n", stack->items[stack->top]);
-  stack->top -= 1;
+  assert(stack->topAddr != -1 && "Stack is empty");
+  printf("The popped element is %d\n", stack->items[stack->topAddr]);
+  stack->topAddr -= 1;
 }
 
 void push(struct Stack* stack, uint32_t element)
 {
-  assert(stack->top != (maxSize - 1) && "Stack overflow");
-  stack->top +=1;
-  stack->items[stack->top] = element;
-  printf("The pushed element is %d\n", stack->items[stack->top]);
+  if(stack->topAddr == stack->currMaxSize - 1)
+  {
+    printf("Stack is being resized\n");
+    stack->items = (word_t*) realloc(stack->items, stack->currMaxSize * 2 * sizeof(word_t)); // makes the size of the stack currMax * 2
+    stack->currMaxSize *= 2;
+  }
+  stack->topAddr += 1;
+  stack->items[stack->topAddr] = element;
+  printf("The pushed element is %d\n", stack->items[stack->topAddr]);
 }
 //------------------------Stack implementation ends---------------
 
@@ -58,6 +67,7 @@ void set_output(FILE *fp)
 
 int init_ijvm(char *binary_path) 
 {
+  initialize(globalStack_ptr);
   in = stdin;
   out = stdout;
   uint8_t buf[4];
@@ -129,30 +139,23 @@ word_t get_constant(int i)
   return(ctVals[i]);
 }
 
-/*unsigned int get_program_counter(void)
+unsigned int get_program_counter(void)
 {
-  switch (expression)
-  {
-  case:  
-    break;
-  
-  default:
-    break;
-  }
-  return 0;
-}*/
+  printf("Progcount: %u\n", progCount);
+  return progCount;
+}
 
 word_t tos(void) 
 {
-  assert(globalStack_ptr->top != -1 && "Stack is empty");
-  int32_t signedTop = (int) globalStack_ptr->items[globalStack_ptr->top];
+  assert(globalStack_ptr->topAddr != -1 && "Stack is empty");
+  int32_t signedTop = (int) globalStack_ptr->items[globalStack_ptr->topAddr];
   return signedTop;
 }
 
 bool finished(void) 
 {
   // TODO: implement me
-  return false;
+  return isFinished; //return vlue of bool is finished, if true ends program
 }
 
 word_t get_local_variable(int i) 
@@ -161,10 +164,126 @@ word_t get_local_variable(int i)
   return 0;
 }
 
+void extractTop2Vals(int32_t *first, int32_t *second)
+{
+  first = tos();
+  pop(globalStack_ptr);
+  second = tos();
+  pop(globalStack_ptr);
+}
+
 void step(void) 
 {
   // TODO: implement me
+  byte_t operation = *(get_text() + progCount);
+  printf("Instruction code: %x\n", operation);
+  int32_t firstVal, secondVal, opResult;
+  switch (operation)
+  {
+    case OP_BIPUSH:
+    {
+      int8_t arg = *(get_text() + 1);
+      push(globalStack_ptr, arg);
+      progCount = 2 * sizeof(byte_t);
+      break;
+    }
 
+    case OP_DUP:
+    {
+      int32_t newVal = tos();
+      push(globalStack_ptr, newVal);        
+      progCount += sizeof(byte_t);
+      break;
+    }
+
+    case OP_IADD:
+    {
+      
+      extractTop2Vals(&firstVal, &secondVal);
+
+      opResult = firstVal + secondVal;
+      push(globalStack_ptr, opResult);
+      progCount += sizeof(byte_t);
+      break;
+    }
+
+    case OP_IAND:
+    {
+      extractTop2Vals(&firstVal, &secondVal);
+
+      opResult = firstVal & secondVal;
+      push(globalStack_ptr, opResult);
+      progCount += sizeof(byte_t);
+      break;
+    }
+
+    case OP_IOR:
+    {
+      extractTop2Vals(&firstVal, &secondVal);
+
+      opResult = firstVal | secondVal;
+      push(globalStack_ptr, opResult);
+      progCount += sizeof(byte_t);
+      break;
+    }
+
+    case OP_ISUB:
+    {
+      extractTop2Vals(&firstVal, &secondVal);
+
+      opResult = secondVal - firstVal;
+      push(globalStack_ptr, opResult);
+      progCount += sizeof(byte_t);
+      break;
+    }
+
+    case OP_NOP:
+    {
+      progCount += sizeof(byte_t);
+      break;
+    }  
+    
+    case OP_POP:
+    {
+      pop(globalStack_ptr);
+      progCount += sizeof(byte_t);
+      break;
+    }
+
+    case OP_SWAP:
+    {
+      extractTop2Vals(&firstVal, &secondVal);
+      push(globalStack_ptr, firstVal);
+      push(globalStack_ptr, secondVal);
+      progCount += sizeof(byte_t);
+      break;
+    }
+
+    case OP_ERR:
+    {
+      printf("An error has ocurred. Emulator halted\n");
+      progCount += sizeof(byte_t);
+    }
+
+    case OP_HALT:
+    {
+      progCount += sizeof(byte_t);
+      isFinished = true;
+      finished();
+    }
+
+    case OP_OUT:
+    {
+      fgetc(in);
+      progCount += sizeof(byte_t);
+      break;
+    }
+
+    default:
+      isFinished = true;
+      finished();
+      break;
+  }
 }
 
 void run(void) 

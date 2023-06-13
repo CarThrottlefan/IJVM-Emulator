@@ -1,4 +1,4 @@
-#include <stdint.h>  
+/*#include <stdint.h>  
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -36,6 +36,7 @@ void push(struct Stack* stack, uint32_t element)
     stack->currMaxSize *= 2;
   }
   stack->top +=1;
+  printf("Top addr : %u", stack->top);
   stack->items[stack->top] = element;
   printf("The pushed element is %d\n", stack->items[stack->top]);
 }
@@ -59,4 +60,4 @@ int main(int argc, char** argv){
   push(stack_ptr, 3);
   top(stack_ptr);
   return 0;
-}
+}*/
