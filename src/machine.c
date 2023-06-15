@@ -34,11 +34,14 @@ void initialize(struct Stack* stack) {
     stack->topAddr = -1; //initializes the stack pointer to -1 when a stack is made
 }
 
-void pop(struct Stack* stack) 
+word_t pop(struct Stack* stack) 
 {
   assert(stack->topAddr != -1 && "Stack is empty");
   printf("The popped element is %d\n", stack->items[stack->topAddr]);
-  stack->topAddr -= 1;
+  //printf("Old stack top: %d\n", stack->topAddr);
+  stack->topAddr = stack->topAddr - 1;
+  //printf("New stack top: %d\n", stack->topAddr);
+  return stack->items[stack->topAddr + 1];
 }
 
 void push(struct Stack* stack, uint32_t element)
@@ -70,6 +73,7 @@ int init_ijvm(char *binary_path)
   initialize(globalStack_ptr);
   in = stdin;
   out = stdout;
+  isFinished = false;
   uint8_t buf[4];
   progCount = 0; 
  
@@ -155,6 +159,7 @@ word_t tos(void)
 bool finished(void) 
 {
   // TODO: implement me
+  
   return isFinished; //return vlue of bool is finished, if true ends program
 }
 
@@ -164,27 +169,32 @@ word_t get_local_variable(int i)
   return 0;
 }
 
-void extractTop2Vals(int32_t *first, int32_t *second)
+/*void extractTop2Vals(int32_t *first, int32_t *second)
 {
   first = tos();
+  printf("First in func: %ld\n", first);
+
   pop(globalStack_ptr);
   second = tos();
+  printf("Second in func: %ld\n", second);
   pop(globalStack_ptr);
-}
+}*/
 
 void step(void) 
 {
   // TODO: implement me
   byte_t operation = *(get_text() + progCount);
-  printf("Instruction code: %x\n", operation);
+  //printf("Instruction code: %x\n", operation);
   int32_t firstVal, secondVal, opResult;
   switch (operation)
   {
     case OP_BIPUSH:
     {
-      int8_t arg = *(get_text() + 1);
+      printf("-----------------------------------------BIPUSH\n");
+      int8_t arg = *(get_text() + progCount +sizeof(byte_t));
+      printf("................................ARG: %d\n", arg);
       push(globalStack_ptr, arg);
-      progCount = 2 * sizeof(byte_t);
+      progCount += 2 * sizeof(byte_t);
       break;
     }
 
@@ -198,10 +208,15 @@ void step(void)
 
     case OP_IADD:
     {
-      
-      extractTop2Vals(&firstVal, &secondVal);
+      printf("-------------------------------------IADD\n");
+      firstVal = pop(globalStack_ptr);
+      printf("===================First: %d\n", firstVal);
+
+      secondVal = pop(globalStack_ptr);
+      printf("====================Second: %d\n", secondVal);
 
       opResult = firstVal + secondVal;
+      printf("======================result: %d\n", opResult);
       push(globalStack_ptr, opResult);
       progCount += sizeof(byte_t);
       break;
@@ -209,7 +224,8 @@ void step(void)
 
     case OP_IAND:
     {
-      extractTop2Vals(&firstVal, &secondVal);
+      firstVal = pop(globalStack_ptr);
+      secondVal = pop(globalStack_ptr);
 
       opResult = firstVal & secondVal;
       push(globalStack_ptr, opResult);
@@ -219,7 +235,8 @@ void step(void)
 
     case OP_IOR:
     {
-      extractTop2Vals(&firstVal, &secondVal);
+      firstVal = pop(globalStack_ptr);
+      secondVal = pop(globalStack_ptr);
 
       opResult = firstVal | secondVal;
       push(globalStack_ptr, opResult);
@@ -229,7 +246,8 @@ void step(void)
 
     case OP_ISUB:
     {
-      extractTop2Vals(&firstVal, &secondVal);
+      firstVal = pop(globalStack_ptr);
+      secondVal = pop(globalStack_ptr);
 
       opResult = secondVal - firstVal;
       push(globalStack_ptr, opResult);
@@ -245,14 +263,16 @@ void step(void)
     
     case OP_POP:
     {
-      pop(globalStack_ptr);
+      /*int32_t useless =*/ pop(globalStack_ptr);
       progCount += sizeof(byte_t);
       break;
     }
 
     case OP_SWAP:
     {
-      extractTop2Vals(&firstVal, &secondVal);
+      firstVal = pop(globalStack_ptr);
+      secondVal = pop(globalStack_ptr);
+
       push(globalStack_ptr, firstVal);
       push(globalStack_ptr, secondVal);
       progCount += sizeof(byte_t);
@@ -262,27 +282,44 @@ void step(void)
     case OP_ERR:
     {
       printf("An error has ocurred. Emulator halted\n");
-      progCount += sizeof(byte_t);
+      isFinished = true;
+      break;
     }
 
     case OP_HALT:
     {
-      progCount += sizeof(byte_t);
+      //progCount += sizeof(byte_t);
       isFinished = true;
-      finished();
+      break;
     }
 
     case OP_OUT:
     {
-      fgetc(in);
+      firstVal = pop(globalStack_ptr);
+      fprintf(out, "%c", firstVal);
+      progCount += sizeof(byte_t);
+      break;
+    }
+
+    case OP_IN:
+    {
+      firstVal = fgetc(in);
+      if(firstVal != EOF)
+      {
+        push(globalStack_ptr, firstVal);
+      }  
       progCount += sizeof(byte_t);
       break;
     }
 
     default:
       isFinished = true;
-      finished();
       break;
+  }
+
+  if(progCount >= get_text_size())
+  {
+    isFinished = true;
   }
 }
 
