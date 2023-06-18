@@ -190,13 +190,12 @@ void step(void)
   {
     case OP_BIPUSH:
     {
-      printf("-----------------------------------------BIPUSH\n");
-      int8_t arg = *(get_text() + progCount +sizeof(byte_t));
-      printf("................................ARG: %d\n", arg);
+      int8_t arg = *(get_text() + progCount + sizeof(byte_t));
       push(globalStack_ptr, arg);
       progCount += 2 * sizeof(byte_t);
       break;
     }
+
 
     case OP_DUP:
     {
@@ -208,15 +207,11 @@ void step(void)
 
     case OP_IADD:
     {
-      printf("-------------------------------------IADD\n");
       firstVal = pop(globalStack_ptr);
-      printf("===================First: %d\n", firstVal);
 
       secondVal = pop(globalStack_ptr);
-      printf("====================Second: %d\n", secondVal);
 
       opResult = firstVal + secondVal;
-      printf("======================result: %d\n", opResult);
       push(globalStack_ptr, opResult);
       progCount += sizeof(byte_t);
       break;
@@ -279,19 +274,6 @@ void step(void)
       break;
     }
 
-    case OP_ERR:
-    {
-      printf("An error has ocurred. Emulator halted\n");
-      isFinished = true;
-      break;
-    }
-
-    case OP_HALT:
-    {
-      //progCount += sizeof(byte_t);
-      isFinished = true;
-      break;
-    }
 
     case OP_OUT:
     {
@@ -309,6 +291,46 @@ void step(void)
         push(globalStack_ptr, firstVal);
       }  
       progCount += sizeof(byte_t);
+      break;
+    }
+
+    case OP_GOTO:
+    {
+      printf("Progcount: %d\n", progCount);
+      int16_t offset = read_uint16_t(get_text() + progCount + 1);
+      printf("Offset: %d\n", offset);
+      progCount += offset;
+            printf("NEW Progcount: %d\n", progCount);
+
+      break;
+    }
+
+    case OP_IFEQ:
+    {
+      int16_t offset = read_uint16_t(get_text() + progCount + 1);
+      firstVal = pop(globalStack_ptr);
+      if(firstVal == 0)
+      {
+        progCount += offset;
+      }
+      else
+      {
+        progCount += sizeof(byte_t);
+      }
+      break;
+    }
+
+    case OP_ERR:
+    {
+      printf("An error has ocurred. Emulator halted\n");
+      isFinished = true;
+      break;
+    }
+
+    case OP_HALT:
+    {
+      //progCount += sizeof(byte_t);
+      isFinished = true;
       break;
     }
 
