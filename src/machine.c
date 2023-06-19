@@ -82,7 +82,7 @@ int init_ijvm(char *binary_path)
     return -1;
   }
 
-  printf("File located at '%s' opened\n", binary_path);
+  printf("\nFile located at '%s' opened\n\n", binary_path);
   
   // Magic Number
   fread(buf, sizeof(uint8_t), 4, f); //reads from f 1 byte at a time, the first 4 bytes
@@ -190,6 +190,7 @@ void step(void)
   {
     case OP_BIPUSH:
     {
+      printf("BIPUSH:  ");
       int8_t arg = *(get_text() + progCount + sizeof(byte_t));
       push(globalStack_ptr, arg);
       progCount += 2 * sizeof(byte_t);
@@ -199,6 +200,7 @@ void step(void)
 
     case OP_DUP:
     {
+      printf("DUP:  ");
       int32_t newVal = tos();
       push(globalStack_ptr, newVal);        
       progCount += sizeof(byte_t);
@@ -207,6 +209,7 @@ void step(void)
 
     case OP_IADD:
     {
+      printf("IADD:  ");
       firstVal = pop(globalStack_ptr);
 
       secondVal = pop(globalStack_ptr);
@@ -241,6 +244,7 @@ void step(void)
 
     case OP_ISUB:
     {
+      printf("ISUB:  ");
       firstVal = pop(globalStack_ptr);
       secondVal = pop(globalStack_ptr);
 
@@ -277,6 +281,7 @@ void step(void)
 
     case OP_OUT:
     {
+      printf("OUT:  ");
       firstVal = pop(globalStack_ptr);
       fprintf(out, "%c", firstVal);
       progCount += sizeof(byte_t);
@@ -296,17 +301,18 @@ void step(void)
 
     case OP_GOTO:
     {
+      printf("============================GOTO=====================\n");
       printf("Progcount: %d\n", progCount);
       int16_t offset = read_uint16_t(get_text() + progCount + 1);
       printf("Offset: %d\n", offset);
       progCount += offset;
             printf("NEW Progcount: %d\n", progCount);
-
       break;
     }
 
     case OP_IFEQ:
     {
+      printf("____________________IFEQ_____________\n");
       int16_t offset = read_uint16_t(get_text() + progCount + 1);
       firstVal = pop(globalStack_ptr);
       if(firstVal == 0)
@@ -315,7 +321,40 @@ void step(void)
       }
       else
       {
-        progCount += sizeof(byte_t);
+        progCount += 2 * sizeof(byte_t) + 1;
+      }
+      break;
+    }
+
+    case OP_IFLT:
+    {
+      printf("____________________IFLT_____________\n");
+      int16_t offset = read_uint16_t(get_text() + progCount + 1);
+      firstVal = pop(globalStack_ptr);
+      if(firstVal < 0)
+      {
+        progCount += offset;
+      }
+      else
+      {
+        progCount += 2 * sizeof(byte_t) + 1;
+      }
+      break;
+    }
+
+    case OP_IF_ICMPEQ:
+    {
+      printf("____________________IFCMPEQ_____________\n");
+      int16_t offset = read_uint16_t(get_text() + progCount + 1);
+      firstVal = pop(globalStack_ptr);
+      secondVal = pop(globalStack_ptr);
+      if(firstVal == secondVal)
+      {
+        progCount += offset;
+      }
+      else
+      {
+        progCount += 2 * sizeof(byte_t) + 1;
       }
       break;
     }
