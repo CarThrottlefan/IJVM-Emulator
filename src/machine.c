@@ -13,7 +13,7 @@ FILE *out;  // use for example fprintf(out, "%c", value); to print value to out
 
 uint32_t ctNum, txtNum, progCount = 0;
 int *ctVals, *txtVals;
-bool isFinished = false, sameFunc = false;
+bool isFinished = false, sameFunc = false, wide = false;
 word_t lv;
 
 //------------------------Stack implementation begins---------------
@@ -191,7 +191,6 @@ void step(void)
 {
   // TODO: implement me
   byte_t operation = *(get_text() + progCount);
-  bool wide = false;
   //printf("Instruction code: %x\n", operation);
   int32_t firstVal, secondVal, opResult;
   int16_t offset;
@@ -203,7 +202,8 @@ void step(void)
     globalStack_ptr -> topAddr += offset;
   }
 //TODO implement the else for task 5, where the ofsset is from the bytes
-
+for(;;)
+{
   switch (operation)
   {
     case OP_BIPUSH:
@@ -411,7 +411,7 @@ void step(void)
       printf("Progcount: %d\n", progCount);
       if(!wide)
       {
-        arg = (int16_t) *(get_text() + progCount + sizeof(byte_t));
+        arg = (uint16_t) *(get_text() + progCount + sizeof(byte_t));
         progCount += sizeof(byte_t) + 1;
       }
       else
@@ -436,7 +436,7 @@ void step(void)
 
       if(!wide)
       {
-        arg = (int16_t) *(get_text() + progCount + sizeof(byte_t));
+        arg = (uint16_t) *(get_text() + progCount + sizeof(byte_t));
         progCount += sizeof(byte_t) + 1;
       }
       else
@@ -457,7 +457,7 @@ void step(void)
       
       if(!wide)
       {
-        arg = (int16_t) *(get_text() + progCount + sizeof(byte_t));
+        arg = (uint16_t) *(get_text() + progCount + sizeof(byte_t));
         int8_t temp = *(get_text() + progCount + 2 * sizeof(byte_t));
         val = (int16_t) temp;
         progCount += 2 * sizeof(byte_t) + 1 ;
@@ -478,13 +478,17 @@ void step(void)
     {
       wide = true;
       progCount += sizeof(byte_t);
-      break;
+      operation = *(get_text() + progCount);
+      printf("Instruction code: %x\n", operation);
+      continue;
     }
 
     default:
       isFinished = true;
       break;
   }
+  break;
+}
 
   if(progCount >= get_text_size())
   {
