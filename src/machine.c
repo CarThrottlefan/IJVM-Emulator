@@ -32,7 +32,7 @@ struct Stack* globalStack_ptr = &globalStack;
 void initialize(struct Stack* stack) {
     stack->items = (word_t*) malloc(initSize * sizeof(word_t));
     stack->currMaxSize = initSize;
-    stack->topAddr = -1; //initializes the stack pointer to -1 when a stack is made
+    stack->topAddr = -1; //initializes the stack pointer to -1 when a stack is made  
 }
 
 word_t pop(struct Stack* stack) 
@@ -53,6 +53,10 @@ void push(struct Stack* stack, uint32_t element)
     stack->items = (word_t*) realloc(stack->items, stack->currMaxSize * 2 * sizeof(word_t)); // makes the size of the stack currMax * 2
     stack->currMaxSize *= 2;
   }
+  if(stack->topAddr == -1)
+  {
+     lv = 0; //points to the bottom of the stack
+  }
   stack->topAddr += 1;
   stack->items[stack->topAddr] = element;
   printf("The pushed element is %d\n", stack->items[stack->topAddr]);
@@ -71,11 +75,11 @@ void set_output(FILE *fp)
 
 int init_ijvm(char *binary_path) 
 {
-  lv = 0; //points to the bottom of the stack
   initialize(globalStack_ptr);
   in = stdin;
   out = stdout;
   isFinished = false;
+  sameFunc = false;
   uint8_t buf[4];
   progCount = 0; 
  
@@ -193,6 +197,7 @@ void step(void)
   int16_t offset;
   if(lv == 0 && !sameFunc) //FIXME find a way to only add the offset for the first time the func is called, maybe this way
   {
+    printf("HERE\n");
     offset = 256; //the space allocated for variables, for main it is 256
     sameFunc = true;
     globalStack_ptr -> topAddr += offset;
@@ -443,6 +448,29 @@ void step(void)
 
       globalStack_ptr -> items[lv + arg] = val;
       printf("NEW Progcount: %d\n", progCount);
+      break;
+    }
+
+    case OP_IINC:
+    {
+      int16_t arg, val;
+      
+      if(!wide)
+      {
+        arg = (int16_t) *(get_text() + progCount + sizeof(byte_t));
+        int8_t temp = *(get_text() + progCount + 2 * sizeof(byte_t));
+        val = (int16_t) temp;
+        progCount += 2 * sizeof(byte_t) + 1 ;
+      }
+      else
+      {
+        arg = read_uint16_t(get_text() + progCount + 1);
+        val = read_uint16_t(get_text() + progCount + sizeof(short) + 1);
+        wide = false;
+        progCount += 2 * sizeof(short) + 1;
+      }
+      
+      globalStack_ptr -> items[lv + arg] += val;
       break;
     }
 
