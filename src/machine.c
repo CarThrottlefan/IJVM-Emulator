@@ -465,9 +465,10 @@ for(;;)
       else
       {
         arg = read_uint16_t(get_text() + progCount + 1);
-        val = read_uint16_t(get_text() + progCount + sizeof(short) + 1);
+        int8_t temp = *(get_text() + progCount + sizeof(short) + 1);
+        val = (int16_t) temp;
         wide = false;
-        progCount += 2 * sizeof(short) + 1;
+        progCount += sizeof(byte_t) + sizeof(short) + 1;
       }
       
       globalStack_ptr -> items[lv + arg] += val;
