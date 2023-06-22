@@ -13,7 +13,8 @@ FILE *out;  // use for example fprintf(out, "%c", value); to print value to out
 
 uint32_t ctNum, txtNum, progCount = 0;
 int *ctVals, *txtVals;
-bool isFinished = false;
+bool isFinished = false, sameFunc = false;
+word_t lv;
 
 //------------------------Stack implementation begins---------------
 #define initSize 1024
@@ -70,6 +71,7 @@ void set_output(FILE *fp)
 
 int init_ijvm(char *binary_path) 
 {
+  lv = 0; //points to the bottom of the stack
   initialize(globalStack_ptr);
   in = stdin;
   out = stdout;
@@ -160,13 +162,14 @@ bool finished(void)
 {
   // TODO: implement me
   
-  return isFinished; //return vlue of bool is finished, if true ends program
+  return isFinished; //return value of bool is finished, if true ends program
 }
 
 word_t get_local_variable(int i) 
 {
   // TODO: implement me
-  return 0;
+  return globalStack_ptr -> items[lv + i];
+ //return 0;
 }
 
 /*void extractTop2Vals(int32_t *first, int32_t *second)
@@ -184,8 +187,18 @@ void step(void)
 {
   // TODO: implement me
   byte_t operation = *(get_text() + progCount);
+  bool wide = false;
   //printf("Instruction code: %x\n", operation);
   int32_t firstVal, secondVal, opResult;
+  int16_t offset;
+  if(lv == 0 && !sameFunc) //FIXME find a way to only add the offset for the first time the func is called, maybe this way
+  {
+    offset = 256; //the space allocated for variables, for main it is 256
+    sameFunc = true;
+    globalStack_ptr -> topAddr += offset;
+  }
+//TODO implement the else for task 5, where the ofsset is from the bytes
+
   switch (operation)
   {
     case OP_BIPUSH:
@@ -194,6 +207,7 @@ void step(void)
       int8_t arg = *(get_text() + progCount + sizeof(byte_t));
       push(globalStack_ptr, arg);
       progCount += 2 * sizeof(byte_t);
+      printf("PROGCOUNT: %d\n", progCount);
       break;
     }
 
@@ -321,7 +335,8 @@ void step(void)
       }
       else
       {
-        progCount += 2 * sizeof(byte_t) + 1;
+        //progCount += 2 * sizeof(byte_t) + 1;
+        progCount += 1 + sizeof(offset);
       }
       break;
     }
@@ -337,7 +352,7 @@ void step(void)
       }
       else
       {
-        progCount += 2 * sizeof(byte_t) + 1;
+        progCount += 1 + sizeof(offset);
       }
       break;
     }
@@ -354,7 +369,7 @@ void step(void)
       }
       else
       {
-        progCount += 2 * sizeof(byte_t) + 1;
+        progCount += 1 + sizeof(offset);
       }
       break;
     }
@@ -370,6 +385,71 @@ void step(void)
     {
       //progCount += sizeof(byte_t);
       isFinished = true;
+      break;
+    }
+
+    case OP_LDC_W:
+    {
+      printf("Progcount: %d\n", progCount);
+      int16_t arg = read_uint16_t(get_text() + progCount + 1);
+      word_t constant = get_constant(arg);
+      push(globalStack_ptr, constant);
+      progCount += 1 + sizeof(short);
+      printf("New Progcount: %d\n", progCount);
+      break;
+    }
+
+    case OP_ILOAD:
+    {
+      int16_t arg;
+      printf("===============ILOAD==============\n");
+      printf("Progcount: %d\n", progCount);
+      if(!wide)
+      {
+        arg = (int16_t) *(get_text() + progCount + sizeof(byte_t));
+        progCount += sizeof(byte_t) + 1;
+      }
+      else
+      {
+        arg = read_uint16_t(get_text() + progCount + 1);
+        wide = false;
+        progCount += sizeof(short) + 1;
+      }
+
+      word_t var = get_local_variable(arg);//globalStack_ptr -> items[lv + arg];
+      push(globalStack_ptr, var);
+      printf("NEW Progcount: %d\n", progCount);
+      break;
+    }
+
+    case OP_ISTORE:
+    {
+      word_t val = pop(globalStack_ptr);
+      int16_t arg;
+      printf("--------ISTORE---------\n");
+      printf("Progcount: %d\n", progCount);
+
+      if(!wide)
+      {
+        arg = (int16_t) *(get_text() + progCount + sizeof(byte_t));
+        progCount += sizeof(byte_t) + 1;
+      }
+      else
+      {
+        arg = read_uint16_t(get_text() + progCount + 1);
+        wide = false;
+        progCount += sizeof(short) + 1;
+      }
+
+      globalStack_ptr -> items[lv + arg] = val;
+      printf("NEW Progcount: %d\n", progCount);
+      break;
+    }
+
+    case OP_WIDE:
+    {
+      wide = true;
+      progCount += sizeof(byte_t);
       break;
     }
 
