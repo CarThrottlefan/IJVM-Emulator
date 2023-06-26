@@ -13,8 +13,9 @@ FILE *out;  // use for example fprintf(out, "%c", value); to print value to out
 
 uint32_t ctNum, txtNum, progCount = 0;
 int *ctVals, *txtVals;
-bool isFinished = false, sameFunc = false, wide = false;
+bool isFinished = false, sameFunc = false, wide = false, methodCount = false;
 word_t lv;
+int16_t opOffset, lv_addr, opOffset_cpy;
 
 //------------------------Stack implementation begins---------------
 #define initSize 1024
@@ -32,7 +33,7 @@ struct Stack* globalStack_ptr = &globalStack;
 void initialize(struct Stack* stack) {
     stack->items = (word_t*) malloc(initSize * sizeof(word_t));
     stack->currMaxSize = initSize;
-    stack->topAddr = -1; //initializes the stack pointer to -1 when a stack is made  
+    stack->topAddr = -1; //initializes the stack top pointer to -1 when a stack is made  
 }
 
 word_t pop(struct Stack* stack) 
@@ -55,7 +56,7 @@ void push(struct Stack* stack, uint32_t element)
   }
   if(stack->topAddr == -1)
   {
-     lv = 0; //points to the bottom of the stack
+     lv = 0; //points to the bottom of the stack, used for main
   }
   stack->topAddr += 1;
   stack->items[stack->topAddr] = element;
@@ -163,17 +164,13 @@ word_t tos(void)
 }
 
 bool finished(void) 
-{
-  // TODO: implement me
-  
+{  
   return isFinished; //return value of bool is finished, if true ends program
 }
 
 word_t get_local_variable(int i) 
 {
-  // TODO: implement me
   return globalStack_ptr -> items[lv + i];
- //return 0;
 }
 
 /*void extractTop2Vals(int32_t *first, int32_t *second)
@@ -193,14 +190,21 @@ void step(void)
   byte_t operation = *(get_text() + progCount);
   //printf("Instruction code: %x\n", operation);
   int32_t firstVal, secondVal, opResult;
-  int16_t offset;
+
   if(lv == 0 && !sameFunc) //FIXME find a way to only add the offset for the first time the func is called, maybe this way
   {
     printf("HERE\n");
-    offset = 256; //the space allocated for variables, for main it is 256
+    opOffset = 256; //the space allocated for variables, for main it is 256
     sameFunc = true;
-    globalStack_ptr -> topAddr += offset;
+    globalStack_ptr -> topAddr += opOffset;
   }
+
+  /*if(methodCount)
+  {
+    progCount = 1 + 2 * sizeof(short);
+    methodCount = false;
+  }*/
+
 //TODO implement the else for task 5, where the ofsset is from the bytes
 for(;;)
 {
@@ -482,6 +486,65 @@ for(;;)
       operation = *(get_text() + progCount);
       printf("Instruction code: %x\n", operation);
       continue;
+    }
+
+    case OP_INVOKEVIRTUAL:
+    {
+      word_t callerPC, callerLV;
+      word_t *lv_ptr;
+
+      int16_t indexOfConstant = read_uint16_t(get_text() + progCount + 1); //the index which shows where method area starts in txt
+      int32_t startMethodArea = get_constant(indexOfConstant);
+      int16_t numOfArgs = read_uint16_t(get_text() + startMethodArea); 
+      int16_t numOfVars = read_uint16_t(get_text() + sizeof(short) + startMethodArea);
+      
+      callerPC = progCount;
+      callerLV = lv;
+      progCount = 2 * sizeof(short) + startMethodArea; //first instruction is 5 bytes in
+      //methodCount = true;
+      opOffset_cpy = globalStack_ptr -> topAddr;
+
+      lv_addr = globalStack_ptr -> topAddr - numOfArgs + 1; //gets the addres of LV in the stack
+      int varOffset = lv_addr + numOfArgs; //gets the address where the local vars are stored
+
+      opOffset = varOffset + numOfVars; //offset for the operations in the stack
+      globalStack_ptr -> topAddr = opOffset - 1;
+
+      push(globalStack_ptr, callerPC);
+      //lv = tos(); // gets the value from the top of the stack, which is cpc
+      lv = globalStack_ptr -> topAddr; 
+      
+      push(globalStack_ptr, callerLV);
+      
+      //objref_ptr = &globalStack_ptr -> items[globalStack_ptr->topAddr];
+      //lv = *objref_ptr;
+
+      //globalStack_ptr -> items [lv_addr] = lv_ptr; //make objref point at caller's pc
+      break;
+    }
+
+    case OP_IRETURN: //TODO Implement me
+    {
+      if(lv == 0)
+      {
+        isFinished = true; //halts the program
+      }
+
+      word_t callerPC, callerLV, returnVal;
+      
+      returnVal = pop(globalStack_ptr);
+      callerLV = pop(globalStack_ptr);
+      callerPC = pop(globalStack_ptr);
+
+      globalStack_ptr -> topAddr = lv_addr - 1;
+      lv = callerLV;
+
+      progCount = callerPC;
+      opOffset = opOffset_cpy;
+
+      push(globalStack_ptr, returnVal);
+      progCount += sizeof(short) + sizeof(byte_t);
+      break;
     }
 
     default:
