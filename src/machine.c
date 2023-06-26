@@ -170,7 +170,7 @@ bool finished(void)
 
 word_t get_local_variable(int i) 
 {
-  return globalStack_ptr -> items[lv + i];
+  return globalStack_ptr -> items[lv_addr + i];
 }
 
 /*void extractTop2Vals(int32_t *first, int32_t *second)
@@ -425,7 +425,7 @@ for(;;)
         progCount += sizeof(short) + 1;
       }
 
-      word_t var = get_local_variable(arg);//globalStack_ptr -> items[lv + arg];
+      word_t var = get_local_variable(arg);
       push(globalStack_ptr, var);
       printf("NEW Progcount: %d\n", progCount);
       break;
@@ -512,9 +512,13 @@ for(;;)
 
       push(globalStack_ptr, callerPC);
       //lv = tos(); // gets the value from the top of the stack, which is cpc
+     
+      //TODO see if this is the correct line: 
       lv = globalStack_ptr -> topAddr; 
       
       push(globalStack_ptr, callerLV);
+
+      //lv = globalStack_ptr -> topAddr - 2 - numOfVars - numOfArgs - 1;
       
       //objref_ptr = &globalStack_ptr -> items[globalStack_ptr->topAddr];
       //lv = *objref_ptr;
