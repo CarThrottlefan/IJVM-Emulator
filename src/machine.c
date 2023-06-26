@@ -499,7 +499,7 @@ for(;;)
       int16_t numOfVars = read_uint16_t(get_text() + sizeof(short) + startMethodArea);
       
       callerPC = progCount;
-      callerLV = lv;
+      callerLV = lv_addr;
       progCount = 2 * sizeof(short) + startMethodArea; //first instruction is 5 bytes in
       //methodCount = true;
       opOffset_cpy = globalStack_ptr -> topAddr;
@@ -514,7 +514,8 @@ for(;;)
       //lv = tos(); // gets the value from the top of the stack, which is cpc
      
       //TODO see if this is the correct line: 
-      lv = globalStack_ptr -> topAddr; 
+      //lv = globalStack_ptr -> topAddr; 
+      globalStack_ptr -> items[lv_addr] = globalStack_ptr -> topAddr;
       
       push(globalStack_ptr, callerLV);
 
@@ -529,7 +530,7 @@ for(;;)
 
     case OP_IRETURN: //TODO Implement me
     {
-      if(lv == 0)
+      if(lv_addr == 0)
       {
         isFinished = true; //halts the program
       }
@@ -540,6 +541,8 @@ for(;;)
       //callerLV = pop(globalStack_ptr);
       //callerLV = globalStack_ptr -> items[lv];
       //callerPC = pop(globalStack_ptr);
+
+      word_t lv = globalStack_ptr -> items[lv_addr];
       callerLV = globalStack_ptr -> items[lv+1];
       callerPC = globalStack_ptr -> items[lv];
 
