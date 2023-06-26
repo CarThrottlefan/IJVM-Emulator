@@ -491,7 +491,7 @@ for(;;)
     case OP_INVOKEVIRTUAL:
     {
       word_t callerPC, callerLV;
-      word_t *lv_ptr;
+      //word_t *lv_ptr;
 
       int16_t indexOfConstant = read_uint16_t(get_text() + progCount + 1); //the index which shows where method area starts in txt
       int32_t startMethodArea = get_constant(indexOfConstant);
@@ -537,8 +537,11 @@ for(;;)
       word_t callerPC, callerLV, returnVal;
       
       returnVal = pop(globalStack_ptr);
-      callerLV = pop(globalStack_ptr);
-      callerPC = pop(globalStack_ptr);
+      //callerLV = pop(globalStack_ptr);
+      //callerLV = globalStack_ptr -> items[lv];
+      //callerPC = pop(globalStack_ptr);
+      callerLV = globalStack_ptr -> items[lv+1];
+      callerPC = globalStack_ptr -> items[lv];
 
       globalStack_ptr -> topAddr = lv_addr - 1;
       lv = callerLV;
