@@ -542,6 +542,7 @@ for(;;)
 
       globalStack_ptr -> topAddr = lv_addr - 1;
       lv = callerLV;
+      lv_addr = callerLV;
 
       progCount = callerPC;
       opOffset = opOffset_cpy;
