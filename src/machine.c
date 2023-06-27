@@ -131,7 +131,7 @@ void destroy_ijvm(void)
 
 byte_t *get_text(void) 
 {
-  return txtVals;
+  return (byte_t *)txtVals;
 }
 
 unsigned int get_text_size(void) 
@@ -369,7 +369,7 @@ for(;;)
 
     case OP_ILOAD:
     {
-      int16_t arg;
+      uint16_t arg;
       if(!wide)
       {
         arg = (uint16_t) *(get_text() + progCount + sizeof(byte_t));
@@ -390,7 +390,7 @@ for(;;)
     case OP_ISTORE:
     {
       word_t val = pop(globalStack_ptr);
-      int16_t arg;
+      uint16_t arg;
 
       if(!wide)
       {
@@ -410,7 +410,8 @@ for(;;)
 
     case OP_IINC:
     {
-      int16_t arg, val;
+      uint16_t arg; 
+      int16_t val;
       
       if(!wide)
       {
@@ -446,8 +447,8 @@ for(;;)
 
       int16_t indexOfConstant = read_uint16_t(get_text() + progCount + 1); 
       int32_t startMethodArea = get_constant(indexOfConstant);
-      uint16_t numOfArgs = read_uint16_t(get_text() + startMethodArea); 
-      uint16_t numOfVars = read_uint16_t(get_text() + sizeof(short) + startMethodArea);
+      uint32_t numOfArgs = read_uint16_t(get_text() + startMethodArea); 
+      uint32_t numOfVars = read_uint16_t(get_text() + sizeof(short) + startMethodArea);
       
       callerPC = progCount;
       callerLV = lv_addr;
@@ -494,7 +495,13 @@ for(;;)
       break;
     }
 
-    
+    case OP_NEWARRAY:
+    {
+      int32_t count = pop(globalStack_ptr);
+      word_t *array_ptr;
+      array_ptr = (word_t*) malloc(count * sizeof(word_t));
+
+    }
 
     default:
       isFinished = true;
