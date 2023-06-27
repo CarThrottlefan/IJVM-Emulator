@@ -466,7 +466,6 @@ for(;;)
       {
           globalStack_ptr->currMaxSize *= 2;
           loop = true;
-          printf("loop\n");
       }
       if(loop)
       {
