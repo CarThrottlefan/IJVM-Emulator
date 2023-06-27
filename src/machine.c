@@ -14,7 +14,7 @@ FILE *out;  // use for example fprintf(out, "%c", value); to print value to out
 uint32_t ctNum, txtNum, progCount = 0;
 int *ctVals, *txtVals;
 bool isFinished = false, sameFunc = false, wide = false, methodCount = false;
-int16_t opOffset, lv_addr, opOffset_cpy;
+uint16_t opOffset, lv_addr, opOffset_cpy;
 
 //------------------------Stack implementation begins---------------
 #define initSize 1024
@@ -44,7 +44,7 @@ word_t pop(struct Stack* stack)
 
 void push(struct Stack* stack, uint32_t element)
 {
-  if(stack->topAddr == stack->currMaxSize - 1)
+  if(stack->topAddr >= stack->currMaxSize - 1)
   {
     stack->items = (word_t*) realloc(stack->items, stack->currMaxSize * 2 * sizeof(word_t)); // makes the size of the stack currMax * 2
     stack->currMaxSize *= 2;
@@ -460,6 +460,19 @@ for(;;)
 
       opOffset = varOffset + numOfVars; //offset for the operations in the stack
       globalStack_ptr -> topAddr = opOffset - 1;
+      bool loop = false;
+      
+      while(globalStack_ptr->currMaxSize < opOffset)
+      {
+          globalStack_ptr->currMaxSize *= 2;
+          loop = true;
+          printf("loop\n");
+      }
+      if(loop)
+      {
+        globalStack_ptr->items = (word_t*) realloc(globalStack_ptr->items, globalStack_ptr->currMaxSize * 2 * sizeof(word_t));
+        loop = false;
+      }
 
       push(globalStack_ptr, callerPC);
       globalStack_ptr -> items[lv_addr] = globalStack_ptr -> topAddr;
