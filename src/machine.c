@@ -14,7 +14,6 @@ FILE *out;  // use for example fprintf(out, "%c", value); to print value to out
 uint32_t ctNum, txtNum, progCount = 0;
 int *ctVals, *txtVals;
 bool isFinished = false, sameFunc = false, wide = false, methodCount = false;
-//word_t lv;
 int16_t opOffset, lv_addr, opOffset_cpy;
 
 //------------------------Stack implementation begins---------------
@@ -39,10 +38,7 @@ void initialize(struct Stack* stack) {
 word_t pop(struct Stack* stack) 
 {
   assert(stack->topAddr != -1 && "Stack is empty");
-  //printf("The popped element is %d\n", stack->items[stack->topAddr]);
-  //printf("Old stack top: %d\n", stack->topAddr);
   stack->topAddr = stack->topAddr - 1;
-  //printf("New stack top: %d\n", stack->topAddr);
   return stack->items[stack->topAddr + 1];
 }
 
@@ -50,17 +46,15 @@ void push(struct Stack* stack, uint32_t element)
 {
   if(stack->topAddr == stack->currMaxSize - 1)
   {
-    //printf("Stack is being resized\n");
     stack->items = (word_t*) realloc(stack->items, stack->currMaxSize * 2 * sizeof(word_t)); // makes the size of the stack currMax * 2
     stack->currMaxSize *= 2;
   }
   if(stack->topAddr == -1)
   {
-     lv_addr = 0; //points to the bottom of the stack, used for main
+     lv_addr = 0; //points to the bottom of the frame(bottom of stack in main)
   }
   stack->topAddr += 1;
   stack->items[stack->topAddr] = element;
-  //printf("The pushed element is %d\n", stack->items[stack->topAddr]);
 }
 //------------------------Stack implementation ends---------------
 
@@ -96,7 +90,7 @@ int init_ijvm(char *binary_path)
   uint32_t magicNum = read_uint32_t(buf);
   if(magicNum != 0x1DEADFAD)
   {
-    //printf("This is not an IJVM file\n");
+    printf("This is not an IJVM file\n");
     return -1;
   }
   
@@ -152,7 +146,6 @@ word_t get_constant(int i)
 
 unsigned int get_program_counter(void)
 {
-  //printf("Progcount: %u\n", progCount);
   return progCount;
 }
 
@@ -173,57 +166,33 @@ word_t get_local_variable(int i)
   return globalStack_ptr -> items[lv_addr + i];
 }
 
-/*void extractTop2Vals(int32_t *first, int32_t *second)
-{
-  first = tos();
-  printf("First in func: %ld\n", first);
-
-  pop(globalStack_ptr);
-  second = tos();
-  printf("Second in func: %ld\n", second);
-  pop(globalStack_ptr);
-}*/
-
 void step(void) 
 {
-  // TODO: implement me
   byte_t operation = *(get_text() + progCount);
-  //printf("Instruction code: %x\n", operation);
   int32_t firstVal, secondVal, opResult;
 
-  if(lv_addr == 0 && !sameFunc) //FIXME find a way to only add the offset for the first time the func is called, maybe this way
+  if(lv_addr == 0 && !sameFunc)
   {
-    //printf("HERE\n");
     opOffset = 256; //the space allocated for variables, for main it is 256
     sameFunc = true;
     globalStack_ptr -> topAddr += opOffset;
   }
 
-  /*if(methodCount)
-  {
-    progCount = 1 + 2 * sizeof(short);
-    methodCount = false;
-  }*/
-
-//TODO implement the else for task 5, where the ofsset is from the bytes
 for(;;)
 {
   switch (operation)
   {
     case OP_BIPUSH:
     {
-      //printf("BIPUSH:  ");
       int8_t arg = *(get_text() + progCount + sizeof(byte_t));
       push(globalStack_ptr, arg);
       progCount += 2 * sizeof(byte_t);
-      //printf("PROGCOUNT: %d\n", progCount);
       break;
     }
 
 
     case OP_DUP:
     {
-      //printf("DUP:  ");
       int32_t newVal = tos();
       push(globalStack_ptr, newVal);        
       progCount += sizeof(byte_t);
@@ -232,7 +201,6 @@ for(;;)
 
     case OP_IADD:
     {
-      //printf("IADD:  ");
       firstVal = pop(globalStack_ptr);
 
       secondVal = pop(globalStack_ptr);
@@ -267,7 +235,6 @@ for(;;)
 
     case OP_ISUB:
     {
-      //printf("ISUB:  ");
       firstVal = pop(globalStack_ptr);
       secondVal = pop(globalStack_ptr);
 
@@ -285,7 +252,7 @@ for(;;)
     
     case OP_POP:
     {
-      /*int32_t useless =*/ pop(globalStack_ptr);
+      pop(globalStack_ptr);
       progCount += sizeof(byte_t);
       break;
     }
@@ -304,7 +271,6 @@ for(;;)
 
     case OP_OUT:
     {
-      //printf("OUT:  ");
       firstVal = pop(globalStack_ptr);
       fprintf(out, "%c", firstVal);
       progCount += sizeof(byte_t);
@@ -317,6 +283,10 @@ for(;;)
       if(firstVal != EOF)
       {
         push(globalStack_ptr, firstVal);
+      }
+      else
+      {
+        push(globalStack_ptr, 0);
       }  
       progCount += sizeof(byte_t);
       break;
@@ -324,18 +294,13 @@ for(;;)
 
     case OP_GOTO:
     {
-      //printf("============================GOTO=====================\n");
-      //printf("Progcount: %d\n", progCount);
       int16_t offset = read_uint16_t(get_text() + progCount + 1);
-      //printf("Offset: %d\n", offset);
       progCount += offset;
-            //printf("NEW Progcount: %d\n", progCount);
       break;
     }
 
     case OP_IFEQ:
     {
-      //printf("____________________IFEQ_____________\n");
       int16_t offset = read_uint16_t(get_text() + progCount + 1);
       firstVal = pop(globalStack_ptr);
       if(firstVal == 0)
@@ -344,7 +309,6 @@ for(;;)
       }
       else
       {
-        //progCount += 2 * sizeof(byte_t) + 1;
         progCount += 1 + sizeof(offset);
       }
       break;
@@ -352,7 +316,6 @@ for(;;)
 
     case OP_IFLT:
     {
-      //printf("____________________IFLT_____________\n");
       int16_t offset = read_uint16_t(get_text() + progCount + 1);
       firstVal = pop(globalStack_ptr);
       if(firstVal < 0)
@@ -368,7 +331,6 @@ for(;;)
 
     case OP_IF_ICMPEQ:
     {
-      //printf("____________________IFCMPEQ_____________\n");
       int16_t offset = read_uint16_t(get_text() + progCount + 1);
       firstVal = pop(globalStack_ptr);
       secondVal = pop(globalStack_ptr);
@@ -392,27 +354,22 @@ for(;;)
 
     case OP_HALT:
     {
-      //progCount += sizeof(byte_t);
       isFinished = true;
       break;
     }
 
     case OP_LDC_W:
     {
-      //printf("Progcount: %d\n", progCount);
       int16_t arg = read_uint16_t(get_text() + progCount + 1);
       word_t constant = get_constant(arg);
       push(globalStack_ptr, constant);
       progCount += 1 + sizeof(short);
-      //printf("New Progcount: %d\n", progCount);
       break;
     }
 
     case OP_ILOAD:
     {
       int16_t arg;
-      //printf("===============ILOAD==============\n");
-      //printf("Progcount: %d\n", progCount);
       if(!wide)
       {
         arg = (uint16_t) *(get_text() + progCount + sizeof(byte_t));
@@ -427,7 +384,6 @@ for(;;)
 
       word_t var = get_local_variable(arg);
       push(globalStack_ptr, var);
-      //printf("NEW Progcount: %d\n", progCount);
       break;
     }
 
@@ -435,8 +391,6 @@ for(;;)
     {
       word_t val = pop(globalStack_ptr);
       int16_t arg;
-      //printf("--------ISTORE---------\n");
-      //printf("Progcount: %d\n", progCount);
 
       if(!wide)
       {
@@ -451,7 +405,6 @@ for(;;)
       }
 
       globalStack_ptr -> items[lv_addr + arg] = val;
-      //printf("NEW Progcount: %d\n", progCount);
       break;
     }
 
@@ -484,24 +437,21 @@ for(;;)
       wide = true;
       progCount += sizeof(byte_t);
       operation = *(get_text() + progCount);
-      //printf("Instruction code: %x\n", operation);
       continue;
     }
 
     case OP_INVOKEVIRTUAL:
     {
       word_t callerPC, callerLV;
-      //word_t *lv_ptr;
 
-      int16_t indexOfConstant = read_uint16_t(get_text() + progCount + 1); //the index which shows where method area starts in txt
+      int16_t indexOfConstant = read_uint16_t(get_text() + progCount + 1); 
       int32_t startMethodArea = get_constant(indexOfConstant);
-      int16_t numOfArgs = read_uint16_t(get_text() + startMethodArea); 
-      int16_t numOfVars = read_uint16_t(get_text() + sizeof(short) + startMethodArea);
+      uint16_t numOfArgs = read_uint16_t(get_text() + startMethodArea); 
+      uint16_t numOfVars = read_uint16_t(get_text() + sizeof(short) + startMethodArea);
       
       callerPC = progCount;
       callerLV = lv_addr;
       progCount = 2 * sizeof(short) + startMethodArea; //first instruction is 5 bytes in
-      //methodCount = true;
       opOffset_cpy = globalStack_ptr -> topAddr;
 
       lv_addr = globalStack_ptr -> topAddr - numOfArgs + 1; //gets the addres of LV in the stack
@@ -511,24 +461,13 @@ for(;;)
       globalStack_ptr -> topAddr = opOffset - 1;
 
       push(globalStack_ptr, callerPC);
-      //lv = tos(); // gets the value from the top of the stack, which is cpc
-     
-      //TODO see if this is the correct line: 
-      //lv = globalStack_ptr -> topAddr; 
       globalStack_ptr -> items[lv_addr] = globalStack_ptr -> topAddr;
-      
       push(globalStack_ptr, callerLV);
 
-      //lv = globalStack_ptr -> topAddr - 2 - numOfVars - numOfArgs - 1;
-      
-      //objref_ptr = &globalStack_ptr -> items[globalStack_ptr->topAddr];
-      //lv = *objref_ptr;
-
-      //globalStack_ptr -> items [lv_addr] = lv_ptr; //make objref point at caller's pc
       break;
     }
 
-    case OP_IRETURN: //TODO Implement me
+    case OP_IRETURN:
     {
       if(lv_addr == 0)
       {
@@ -538,9 +477,6 @@ for(;;)
       word_t callerPC, callerLV, returnVal;
       
       returnVal = pop(globalStack_ptr);
-      //callerLV = pop(globalStack_ptr);
-      //callerLV = globalStack_ptr -> items[lv];
-      //callerPC = pop(globalStack_ptr);
 
       word_t lv = globalStack_ptr -> items[lv_addr];
       callerLV = globalStack_ptr -> items[lv+1];
@@ -557,6 +493,8 @@ for(;;)
       progCount += sizeof(short) + sizeof(byte_t);
       break;
     }
+
+    
 
     default:
       isFinished = true;
