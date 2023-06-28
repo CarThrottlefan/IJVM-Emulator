@@ -4,6 +4,7 @@
 #include "util.h" // read this file for debug prints, endianness helper functions
 #include <string.h>
 #include "assert.h"
+#include "stack.h"
 
 // see ijvm.h for descriptions of the below functions
 
@@ -14,49 +15,9 @@ FILE *out;  // use for example fprintf(out, "%c", value); to print value to out
 uint32_t ctNum, txtNum, progCount = 0;
 int *ctVals, *txtVals;
 bool isFinished = false, sameFunc = false, wide = false, methodCount = false;
-uint16_t opOffset, lv_addr, opOffset_cpy;
+uint32_t opOffset, lv_addr, opOffset_cpy;
 
-//------------------------Stack implementation begins---------------
-#define initSize 1024
-
-struct Stack
-{
-  word_t *items;
-  int topAddr;
-  uint32_t currMaxSize;
-};
-
-struct Stack globalStack;
-struct Stack* globalStack_ptr = &globalStack;
-
-void initialize(struct Stack* stack) {
-    stack->items = (word_t*) malloc(initSize * sizeof(word_t));
-    stack->currMaxSize = initSize;
-    stack->topAddr = -1; //initializes the stack top pointer to -1 when a stack is made  
-}
-
-word_t pop(struct Stack* stack) 
-{
-  assert(stack->topAddr != -1 && "Stack is empty");
-  stack->topAddr = stack->topAddr - 1;
-  return stack->items[stack->topAddr + 1];
-}
-
-void push(struct Stack* stack, uint32_t element)
-{
-  if(stack->topAddr >= stack->currMaxSize - 1)
-  {
-    stack->items = (word_t*) realloc(stack->items, stack->currMaxSize * 2 * sizeof(word_t)); // makes the size of the stack currMax * 2
-    stack->currMaxSize *= 2;
-  }
-  if(stack->topAddr == -1)
-  {
-     lv_addr = 0; //points to the bottom of the frame(bottom of stack in main)
-  }
-  stack->topAddr += 1;
-  stack->items[stack->topAddr] = element;
-}
-//------------------------Stack implementation ends---------------
+uint64_t step_num = 1;
 
 void set_input(FILE *fp) 
 { 
@@ -104,9 +65,9 @@ int init_ijvm(char *binary_path)
   ctNum = ctNum / 4; //divided by 4 since each constant is 4 bytes
   ctVals = (int *)calloc(ctNum, 4); //allocates a block of 'ctNum' values, each 4 bytes
   fread(ctVals, sizeof(uint32_t), ctNum, f); //reads each constant from the block
-  for(int i = 0; i < ctNum; i++)
+  for(uint32_t i = 0; i < ctNum; i++)
   {
-    ctVals[i] = swap_uint32(ctVals[i]);
+    ctVals[i] = (int)swap_uint32((uint32_t)ctVals[i]);
   }
 
   //Skip past txt origin 
@@ -168,8 +129,11 @@ word_t get_local_variable(int i)
 
 void step(void) 
 {
+  //printf("step: %llu\n", step_num);
+  //step_num += 1;
   byte_t operation = *(get_text() + progCount);
-  int32_t firstVal, secondVal, opResult;
+  //printf("\nInstruction code: %x\n", operation);
+  int64_t firstVal, secondVal, opResult;
 
   if(lv_addr == 0 && !sameFunc)
   {
@@ -184,7 +148,7 @@ for(;;)
   {
     case OP_BIPUSH:
     {
-      int8_t arg = *(get_text() + progCount + sizeof(byte_t));
+      int8_t arg =(int8_t) *(get_text() + progCount + sizeof(byte_t));
       push(globalStack_ptr, arg);
       progCount += 2 * sizeof(byte_t);
       break;
@@ -237,10 +201,14 @@ for(;;)
     {
       firstVal = pop(globalStack_ptr);
       secondVal = pop(globalStack_ptr);
+      //printf("Second val: %d\n", secondVal);
 
       opResult = secondVal - firstVal;
       push(globalStack_ptr, opResult);
       progCount += sizeof(byte_t);
+      
+      //int temp = tos();
+      //printf("Top of stack: %d\n", temp);
       break;
     }
 
@@ -294,18 +262,18 @@ for(;;)
 
     case OP_GOTO:
     {
-      int16_t offset = read_uint16_t(get_text() + progCount + 1);
-      progCount += offset;
+      int16_t offset = (int16_t)read_uint16_t(get_text() + progCount + 1);
+      progCount += (uint32_t) offset;
       break;
     }
 
     case OP_IFEQ:
     {
-      int16_t offset = read_uint16_t(get_text() + progCount + 1);
+      int16_t offset = (int16_t) read_uint16_t(get_text() + progCount + 1);
       firstVal = pop(globalStack_ptr);
       if(firstVal == 0)
       {
-        progCount += offset;
+        progCount =(uint32_t)((int32_t)progCount + offset); //TODO look at me
       }
       else
       {
@@ -316,11 +284,11 @@ for(;;)
 
     case OP_IFLT:
     {
-      int16_t offset = read_uint16_t(get_text() + progCount + 1);
+      int16_t offset = (int16_t) read_uint16_t(get_text() + progCount + 1);
       firstVal = pop(globalStack_ptr);
       if(firstVal < 0)
       {
-        progCount += offset;
+        progCount =(uint32_t)((int32_t)progCount + offset);
       }
       else
       {
@@ -331,12 +299,12 @@ for(;;)
 
     case OP_IF_ICMPEQ:
     {
-      int16_t offset = read_uint16_t(get_text() + progCount + 1);
+      int16_t offset = (int16_t) read_uint16_t(get_text() + progCount + 1);
       firstVal = pop(globalStack_ptr);
       secondVal = pop(globalStack_ptr);
       if(firstVal == secondVal)
       {
-        progCount += offset;
+        progCount =(uint32_t)((int32_t)progCount + offset);
       }
       else
       {
@@ -360,7 +328,7 @@ for(;;)
 
     case OP_LDC_W:
     {
-      int16_t arg = read_uint16_t(get_text() + progCount + 1);
+      uint16_t arg = read_uint16_t(get_text() + progCount + 1);
       word_t constant = get_constant(arg);
       push(globalStack_ptr, constant);
       progCount += 1 + sizeof(short);
@@ -416,14 +384,14 @@ for(;;)
       if(!wide)
       {
         arg = (uint16_t) *(get_text() + progCount + sizeof(byte_t));
-        int8_t temp = *(get_text() + progCount + 2 * sizeof(byte_t));
+        int8_t temp = (int8_t) *(get_text() + progCount + 2 * sizeof(byte_t));
         val = (int16_t) temp;
         progCount += 2 * sizeof(byte_t) + 1 ;
       }
       else
       {
         arg = read_uint16_t(get_text() + progCount + 1);
-        int8_t temp = *(get_text() + progCount + sizeof(short) + 1);
+        int8_t temp = (int8_t) *(get_text() + progCount + sizeof(short) + 1);
         val = (int16_t) temp;
         wide = false;
         progCount += sizeof(byte_t) + sizeof(short) + 1;
@@ -444,19 +412,19 @@ for(;;)
     case OP_INVOKEVIRTUAL:
     {
       word_t callerPC, callerLV;
-
-      int16_t indexOfConstant = read_uint16_t(get_text() + progCount + 1); 
-      int32_t startMethodArea = get_constant(indexOfConstant);
+      
+      uint16_t indexOfConstant = read_uint16_t(get_text() + progCount + 1); 
+      uint32_t startMethodArea = (uint32_t) get_constant(indexOfConstant);
       uint32_t numOfArgs = read_uint16_t(get_text() + startMethodArea); 
       uint32_t numOfVars = read_uint16_t(get_text() + sizeof(short) + startMethodArea);
       
       callerPC = progCount;
       callerLV = lv_addr;
       progCount = 2 * sizeof(short) + startMethodArea; //first instruction is 5 bytes in
-      opOffset_cpy = globalStack_ptr -> topAddr;
+      opOffset_cpy = (uint16_t) globalStack_ptr -> topAddr;
 
-      lv_addr = globalStack_ptr -> topAddr - numOfArgs + 1; //gets the addres of LV in the stack
-      int varOffset = lv_addr + numOfArgs; //gets the address where the local vars are stored
+      lv_addr = ((uint32_t)globalStack_ptr -> topAddr - numOfArgs + 1); //gets the addres of LV in the stack
+      uint32_t varOffset = (uint32_t) (lv_addr + numOfArgs); //gets the address where the local vars are stored
 
       opOffset = varOffset + numOfVars; //offset for the operations in the stack
       globalStack_ptr -> topAddr = opOffset - 1;
@@ -495,6 +463,10 @@ for(;;)
       callerLV = globalStack_ptr -> items[lv+1];
       callerPC = globalStack_ptr -> items[lv];
 
+      //printf("LV in IRETURN: %d\n", lv);
+      //printf("LV_addr in IRETURN: %d\n", lv_addr);
+      
+
       globalStack_ptr -> topAddr = lv_addr - 1;
       lv = callerLV;
       lv_addr = callerLV;
@@ -503,15 +475,26 @@ for(;;)
       opOffset = opOffset_cpy;
 
       push(globalStack_ptr, returnVal);
+      //printf("TOP AT IRETURN: %d\n", tos());
+      //printf("SIze of stack in IRETurn: %d\n", globalStack_ptr->topAddr);
       progCount += sizeof(short) + sizeof(byte_t);
       break;
     }
 
     case OP_NEWARRAY:
     {
-      int32_t count = pop(globalStack_ptr);
-      word_t *array_ptr;
-      array_ptr = (word_t*) malloc(count * sizeof(word_t));
+      word_t count = pop(globalStack_ptr);
+      //word_t *array_ptr;
+      //array_ptr = (word_t*) malloc(count * sizeof(word_t));
+      //push(globalStack_ptr, array_ptr);
+      
+      progCount += 1 + sizeof(word_t);
+      break;
+    }
+
+    case OP_IALOAD:
+    {
+      word_t *array_ptr = pop(globalStack_ptr);
 
     }
 
