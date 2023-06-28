@@ -124,7 +124,7 @@ bool finished(void)
 
 word_t get_local_variable(int i) 
 {
-  return globalStack_ptr -> items[lv_addr + i];
+  return globalStack_ptr -> items[lv_addr + (uint32_t) i];
 }
 
 void step(void) 
@@ -170,7 +170,7 @@ for(;;)
       secondVal = pop(globalStack_ptr);
 
       opResult = firstVal + secondVal;
-      push(globalStack_ptr, opResult);
+      push(globalStack_ptr, (word_t) opResult);
       progCount += sizeof(byte_t);
       break;
     }
@@ -181,7 +181,7 @@ for(;;)
       secondVal = pop(globalStack_ptr);
 
       opResult = firstVal & secondVal;
-      push(globalStack_ptr, opResult);
+      push(globalStack_ptr, (word_t) opResult);
       progCount += sizeof(byte_t);
       break;
     }
@@ -192,7 +192,7 @@ for(;;)
       secondVal = pop(globalStack_ptr);
 
       opResult = firstVal | secondVal;
-      push(globalStack_ptr, opResult);
+      push(globalStack_ptr, (word_t) opResult);
       progCount += sizeof(byte_t);
       break;
     }
@@ -204,7 +204,7 @@ for(;;)
       //printf("Second val: %d\n", secondVal);
 
       opResult = secondVal - firstVal;
-      push(globalStack_ptr, opResult);
+      push(globalStack_ptr, (word_t) opResult);
       progCount += sizeof(byte_t);
       
       //int temp = tos();
@@ -230,8 +230,8 @@ for(;;)
       firstVal = pop(globalStack_ptr);
       secondVal = pop(globalStack_ptr);
 
-      push(globalStack_ptr, firstVal);
-      push(globalStack_ptr, secondVal);
+      push(globalStack_ptr, (word_t) firstVal);
+      push(globalStack_ptr, (word_t) secondVal);
       progCount += sizeof(byte_t);
       break;
     }
@@ -240,7 +240,7 @@ for(;;)
     case OP_OUT:
     {
       firstVal = pop(globalStack_ptr);
-      fprintf(out, "%c", firstVal);
+      fprintf(out, "%c", (byte_t) firstVal);
       progCount += sizeof(byte_t);
       break;
     }
@@ -250,7 +250,7 @@ for(;;)
       firstVal = fgetc(in);
       if(firstVal != EOF)
       {
-        push(globalStack_ptr, firstVal);
+        push(globalStack_ptr, (word_t)firstVal);
       }
       else
       {
@@ -418,8 +418,8 @@ for(;;)
       uint32_t numOfArgs = read_uint16_t(get_text() + startMethodArea); 
       uint32_t numOfVars = read_uint16_t(get_text() + sizeof(short) + startMethodArea);
       
-      callerPC = progCount;
-      callerLV = lv_addr;
+      callerPC = (word_t) progCount;
+      callerLV = (word_t) lv_addr;
       progCount = 2 * sizeof(short) + startMethodArea; //first instruction is 5 bytes in
       opOffset_cpy = (uint16_t) globalStack_ptr -> topAddr;
 
@@ -427,7 +427,7 @@ for(;;)
       uint32_t varOffset = (uint32_t) (lv_addr + numOfArgs); //gets the address where the local vars are stored
 
       opOffset = varOffset + numOfVars; //offset for the operations in the stack
-      globalStack_ptr -> topAddr = opOffset - 1;
+      globalStack_ptr -> topAddr = (int32_t) (opOffset - 1);
       bool loop = false;
       
       while(globalStack_ptr->currMaxSize < opOffset)
@@ -467,11 +467,11 @@ for(;;)
       //printf("LV_addr in IRETURN: %d\n", lv_addr);
       
 
-      globalStack_ptr -> topAddr = lv_addr - 1;
+      globalStack_ptr -> topAddr = (int32_t) lv_addr - 1;
       lv = callerLV;
-      lv_addr = callerLV;
+      lv_addr = (uint32_t) callerLV;
 
-      progCount = callerPC;
+      progCount = (uint32_t) callerPC;
       opOffset = opOffset_cpy;
 
       push(globalStack_ptr, returnVal);
@@ -483,7 +483,7 @@ for(;;)
 
     case OP_NEWARRAY:
     {
-      word_t count = pop(globalStack_ptr);
+      //word_t count = pop(globalStack_ptr);
       //word_t *array_ptr;
       //array_ptr = (word_t*) malloc(count * sizeof(word_t));
       //push(globalStack_ptr, array_ptr);
@@ -494,7 +494,7 @@ for(;;)
 
     case OP_IALOAD:
     {
-      word_t *array_ptr = pop(globalStack_ptr);
+      //word_t *array_ptr = pop(globalStack_ptr);
 
     }
 

@@ -31,4 +31,3 @@ void push(struct Stack* stack, word_t element)
   stack->topAddr += 1;
   stack->items[stack->topAddr] = element;
 }
-//------------------------Stack implementation ends---------------
