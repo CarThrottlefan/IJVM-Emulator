@@ -458,12 +458,12 @@ void step(void)
         
         returnVal = pop(globalStack_ptr);
 
-        word_t lv = globalStack_ptr -> items[lv_addr];
-        callerLV = globalStack_ptr -> items[lv+1];
-        callerPC = globalStack_ptr -> items[lv];
+        word_t linkPtr = globalStack_ptr -> items[lv_addr];
+        callerLV = globalStack_ptr -> items[linkPtr+1];
+        callerPC = globalStack_ptr -> items[linkPtr];
 
         globalStack_ptr -> topAddr = (int32_t) lv_addr - 1;
-        lv = callerLV;
+        linkPtr = callerLV;
         lv_addr = (uint32_t) callerLV;
 
         progCount = (uint32_t) callerPC;
