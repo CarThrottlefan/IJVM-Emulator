@@ -161,7 +161,7 @@ byte_t get_instruction(void);
 // Or it can be for example be the number of frames on the stack
 // We use this only to test stack depth when using tailcall is less
 // then when using regular calls. 
-// int get_call_stack_size(void);
+int get_call_stack_size(void);
 
 
 // Only needed for garbage collection assignment

@@ -4,11 +4,17 @@
 struct Stack globalStack;
 struct Stack* globalStack_ptr = &globalStack;
 
-void initialize(struct Stack* stack) {
+void initialize(struct Stack* stack) 
+{
     stack->items = (word_t*) malloc(initSize * sizeof(word_t));
     stack->currMaxSize = initSize;
     stack->topAddr = -1; //initializes the stack top pointer to -1 when a stack is made  
 }
+
+/*void initialize_heap(struct Heap_array heap){
+  printf(0);
+} */
+
 
 word_t pop(struct Stack* stack) 
 {

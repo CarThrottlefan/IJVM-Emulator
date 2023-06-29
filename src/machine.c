@@ -17,6 +17,8 @@ int *ctVals, *txtVals;
 bool isFinished = false, sameFunc = false, wide = false, methodCount = false;
 uint32_t opOffset, lv_addr, opOffset_cpy;
 
+int stepCounter = 0;
+
 uint64_t step_num = 1;
 
 void set_input(FILE *fp) 
@@ -110,6 +112,14 @@ unsigned int get_program_counter(void)
   return progCount;
 }
 
+void printfStack(void)
+{
+  for(int i = 256; i <= globalStack_ptr -> topAddr; i++)
+  {
+    printf("              Index %d, value: %d\n", i, globalStack_ptr -> items[i]);
+  }
+}
+
 word_t tos(void) 
 {
   assert(globalStack_ptr->topAddr != -1 && "Stack is empty");
@@ -132,6 +142,7 @@ void step(void)
   //printf("step: %llu\n", step_num);
   //step_num += 1;
   byte_t operation = *(get_text() + progCount);
+  //printf("%d: Instruction code: %x\n", ++stepCounter, operation);
   //printf("\nInstruction code: %x\n", operation);
   int64_t firstVal, secondVal, opResult;
 
@@ -142,7 +153,7 @@ void step(void)
     globalStack_ptr -> topAddr += opOffset;
   }
 
-for(;;)
+for(;;) //looping due to WIDE, if there is a WIDE it gets back to the top then checks the next operation
 {
   switch (operation)
   {
@@ -481,12 +492,17 @@ for(;;)
       break;
     }
 
-    case OP_NEWARRAY:
+    /*case OP_NEWARRAY:
     {
-      //word_t count = pop(globalStack_ptr);
-      //word_t *array_ptr;
-      //array_ptr = (word_t*) malloc(count * sizeof(word_t));
-      //push(globalStack_ptr, array_ptr);
+      word_t count = pop(globalStack_ptr);
+
+      intptr_t *array_ptr;
+      array_ptr = (word_t*) malloc(count * sizeof(word_t) + 1);
+      *array_ptr = count;
+      intptr_t array_addr = (intptr_t) array_ptr;
+
+      intptr_t *temp = (intptr_t*) array_addr;
+      push(globalStack_ptr, array_addr);
       
       progCount += 1 + sizeof(word_t);
       break;
@@ -494,8 +510,104 @@ for(;;)
 
     case OP_IALOAD:
     {
-      //word_t *array_ptr = pop(globalStack_ptr);
+      word_t array_addr = pop(globalStack_ptr);
+      uint32_t index = (uint32_t) pop(globalStack_ptr);
+      word_t *array_ptr = (word_t*) array_addr;
 
+      if(index > *array_ptr) //checks for boundedness of the index in the array
+      {
+        isFinished = true;
+        break;
+      }
+      word_t value = *(array_ptr + index);
+      push(globalStack_ptr, value);
+
+      progCount += 1 + 2 * sizeof(word_t);
+      break;
+    }
+
+    case OP_IASTORE:
+    {
+      word_t array_addr = pop(globalStack_ptr);
+      uint32_t index = (uint32_t) pop(globalStack_ptr);
+      word_t value = pop(globalStack_ptr);
+      word_t *array_ptr = (word_t*) array_addr;
+
+      if(index > *array_ptr) //checks for boundedness of the index in the array
+      {
+        isFinished = true;
+        break;
+      }
+      *(array_ptr + index) = value;
+
+      progCount += 1 + 3 * sizeof(word_t);
+      break;
+    }*/
+    case OP_TAILCALL:
+    {
+      word_t callerPC, callerLV, returnVal;
+      
+      uint16_t indexOfConstant = read_uint16_t(get_text() + progCount + 1); 
+      uint32_t startMethodArea = (uint32_t) get_constant(indexOfConstant);
+      uint16_t numOfArgs = read_uint16_t(get_text() + startMethodArea); 
+
+      //GETS THE ARGS OUT OF THE STACK
+      word_t *arg_storage = malloc(numOfArgs * sizeof(word_t));
+      for(int i = 0; i < numOfArgs; i++)
+      {
+        *(arg_storage + i) = pop(globalStack_ptr);
+      }
+
+      word_t linkPtr = globalStack_ptr -> items[lv_addr];
+      callerLV = globalStack_ptr -> items[linkPtr+1];
+      callerPC = globalStack_ptr -> items[linkPtr];
+
+      globalStack_ptr -> topAddr = (int32_t) lv_addr - 1;
+      // linkPtr = callerLV;
+      // 
+      lv_addr = (uint32_t) callerLV;
+
+      // progCount = (uint32_t) callerPC;
+      //opOffset = opOffset_cpy;
+
+      for(int i = numOfArgs - 1; i >= 0; i--)
+      {
+        push(globalStack_ptr, (word_t) *(arg_storage + i));
+      }
+      free(arg_storage);
+
+      //REST OF INVOKE
+      uint16_t numOfVars = read_uint16_t(get_text() + sizeof(short) + startMethodArea);
+      
+      //callerPC = (word_t) progCount;
+      //callerLV = (word_t) lv_addr;
+      progCount = 4 + startMethodArea; //first instruction is 5 bytes in
+      // opOffset_cpy = (uint16_t) globalStack_ptr -> topAddr;
+
+      lv_addr = ((uint32_t)globalStack_ptr -> topAddr - numOfArgs + 1); //gets the addres of LV in the stack
+      uint32_t varOffset = (uint32_t) (lv_addr + numOfArgs); //gets the address where the local vars are stored
+
+      //opOffset = varOffset + numOfVars; //offset for the operations in the stack
+      globalStack_ptr -> topAddr += numOfVars; // (int32_t) (opOffset - 1);
+      bool loop = false;
+      
+      while(globalStack_ptr->currMaxSize < globalStack_ptr -> topAddr)
+      {
+          globalStack_ptr->currMaxSize *= 2;
+          loop = true;
+      }
+      if(loop)
+      {
+        globalStack_ptr->items = (word_t*) realloc(globalStack_ptr->items, globalStack_ptr->currMaxSize * 2 * sizeof(word_t));
+        loop = false;
+      }
+
+      push(globalStack_ptr, callerPC);
+      globalStack_ptr -> items[lv_addr] = globalStack_ptr -> topAddr;
+      push(globalStack_ptr, callerLV);
+
+      //progCount += sizeof(short) + 1;
+      break;
     }
 
     default:
@@ -509,6 +621,7 @@ for(;;)
   {
     isFinished = true;
   }
+  //printfStack();
 }
 
 void run(void) 
@@ -526,11 +639,11 @@ byte_t get_instruction(void)
 
 // Below: methods needed by bonus assignments, see ijvm.h
 
-//int get_call_stack_size(void) 
-//{
+int get_call_stack_size(void) 
+{
    // TODO: implement me
-//   return sp;
-//}
+   return lv_addr;
+}
 
 
 // Checks if reference is a freed heap array. Note that this assumes that 
