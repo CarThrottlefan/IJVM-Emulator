@@ -15,15 +15,6 @@ struct Stack
   uint32_t currMaxSize;
 };
 
-/*struct Heap_array
-{
-  word_t *arrays; // a thing which stores all the arrays, an array per index()
-  word_t *items;
-  uint32_t size;
-};
-
-void initialize_heap(struct Heap_array heap);*/
-
 //extern struct Stack globalStack;
 extern struct Stack* globalStack_ptr;
 

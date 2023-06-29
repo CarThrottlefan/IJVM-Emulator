@@ -11,11 +11,6 @@ void initialize(struct Stack* stack)
     stack->topAddr = -1; //initializes the stack top pointer to -1 when a stack is made  
 }
 
-/*void initialize_heap(struct Heap_array heap){
-  printf(0);
-} */
-
-
 word_t pop(struct Stack* stack) 
 {
   assert(stack->topAddr != -1 && "Stack is empty");
