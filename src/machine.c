@@ -16,7 +16,7 @@ uint32_t ctNum, txtNum, progCount = 0;
 int *ctVals, *txtVals;
 bool isFinished = false, sameFunc = false, wide = false, methodCount = false;
 uint32_t opOffset, lv_addr, opOffset_cpy, heapSize = 256, numOfArrays = 0;
-word_t *heap;
+word_t **heap;
 
 int stepCounter = 0;
 
@@ -479,13 +479,13 @@ void step(void)
         word_t count = pop(globalStack_ptr);
         word_t *array_ptr;
         array_ptr = malloc(count * sizeof(word_t) + 1); //each array stores the count in it's first position
-        heap[numOfArrays] = &array_ptr;
+        heap[numOfArrays] = array_ptr;
         array_ptr[0] = count;
 
         push(globalStack_ptr, numOfArrays);
         numOfArrays += 1;
 
-        progCount += 1 + sizeof(word_t);
+        progCount += 1;
         break;
       }
 
@@ -493,14 +493,14 @@ void step(void)
       {
         word_t array_addr = pop(globalStack_ptr);
         word_t index = pop(globalStack_ptr) + 1;
-        word_t *array_ptr = &heap[array_addr];
+        word_t *array_ptr = heap[array_addr];
         if(array_ptr[0] < index)
         {
           isFinished = true;
           break;
         }
         push(globalStack_ptr, array_ptr[index]);
-        progCount += 1 + 2 * sizeof(word_t);
+        progCount += 1;
         break;
       }
 
@@ -510,16 +510,16 @@ void step(void)
         word_t index = pop(globalStack_ptr) + 1;
         word_t value = pop(globalStack_ptr);
 
-        word_t *array_ptr = &heap[array_addr];
+        word_t *array_ptr = heap[array_addr];
         if(array_ptr[0] < index)
         {
           isFinished = true;
           break;
         }
         
-        array_ptr[index + 1] = value;
+        array_ptr[index] = value;
 
-        progCount += 1 + 3 * sizeof(word_t);
+        progCount += 1;
         break;
       }
 
