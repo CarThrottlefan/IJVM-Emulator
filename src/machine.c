@@ -575,11 +575,11 @@ void step(void)
         push(globalStack_ptr, callerLV);
 
         break;
+      }
 
       default:
         isFinished = true;
         break;
-      }
     }
     break;
   }
